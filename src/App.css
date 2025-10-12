@@ -32,3 +32,9 @@ main {
   flex-grow: 1;
   padding: 2rem;
 }
+
+body.fullscreen-active {
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* This is crucial to prevent scrollbars */
+}

@@ -1,47 +1,15 @@
-.viz-container {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 180px); /* Adjust based on header/footer height */
-}
-
-.viz-header {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  margin-bottom: 1rem;
-}
-
-.back-button {
-    color: var(--primary-color);
-    text-decoration: none;
-    font-weight: 600;
-    padding: 0.5rem 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    transition: background-color 0.3s;
-}
-
-.back-button:hover {
-    background-color: var(--bg-secondary);
-}
-
-.viz-title {
-  margin: 0;
-  font-size: 1.8rem;
-  text-transform: capitalize;
-}
-
-.viz-frame-container {
-  flex-grow: 1;
-  background-color: var(--bg-secondary);
-  border-radius: 12px;
+.viz-container-fullscreen {
+  /* Take up the entire browser window */
+  width: 100vw;
+  height: 100vh;
+  /* Ensure no overflow creates scrollbars on the container itself */
   overflow: hidden;
-  box-shadow: var(--shadow-lg);
+  background-color: #0b0f17; /* A fallback background color */
 }
 
-.viz-iframe {
+.viz-iframe-fullscreen {
   width: 100%;
   height: 100%;
-  border: none;
+  border: none; /* Remove the default iframe border */
+  display: block; /* Fixes potential small gap below the iframe */
 }
