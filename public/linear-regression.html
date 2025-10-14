@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Linear Regression Interactive (D3.js)</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa4b2;--accent:#60a5fa;--accent-2:#34d399}
+    html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial}
+    body{background:linear-gradient(180deg,#071024 0%, #071628 60%);color:#e6eef6;padding:18px}
+    .app{display:grid;grid-template-columns:420px 1fr;gap:18px;height:calc(100vh - 36px)}
+    .panel{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.03);padding:14px;border-radius:12px;backdrop-filter:blur(6px)}
+    h2{margin:0 0 8px 0;font-size:16px}
+    label{display:block;font-size:12px;color:var(--muted);margin-top:8px}
+    input[type=range]{width:100%}
+    .row{display:flex;gap:8px;align-items:center}
+    button{background:var(--accent);border:none;color:#07203a;padding:8px 10px;border-radius:8px;font-weight:600;cursor:pointer}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+    .muted{color:var(--muted);font-size:13px}
+    .small{font-size:12px}
+    .flex-col{display:flex;flex-direction:column}
+    .control-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .chart-wrap{display:flex;flex-direction:column;height:100%;gap:12px}
+    .plot-card{flex:1;background:transparent;border-radius:10px;padding:12px}
+    svg{width:100%;height:100%;display:block}
+    .stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+    .stat{background:rgba(255,255,255,0.02);padding:8px 10px;border-radius:8px;font-size:13px}
+    .hint{font-size:12px;color:var(--muted);margin-top:6px}
+    .footer{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="panel">
+      <h2>Linear Regression — Controls</h2>
+      <div class="muted small">Click on scatter to add points. Drag points to move. Shift+click a point to delete.</div>
+
+      <label>Data: <span id="pointCount">0</span> points</label>
+      <div class="row" style="margin-top:6px"><button id="clear">Clear</button><button class="ghost" id="randomize">Randomize</button><button class="ghost" id="load-sample">Load sample</button></div>
+
+      <label>Noise (std dev)</label>
+      <input id="noise" type="range" min="0" max="3" step="0.1" value="0.6">
+
+      <label>Fit method</label>
+      <div class="control-grid">
+        <button id="fit-ols">Fit (OLS)</button>
+        <button id="fit-gd">Fit (Gradient Descent)</button>
+      </div>
+
+      <label>Gradient Descent options</label>
+      <div class="row"><div style="flex:1"><input id="lr" type="range" min="0.001" max="1" step="0.001" value="0.05"></div><div style="width:70px;text-align:center" id="lrVal">0.05</div></div>
+      <label>Iterations</label>
+      <input id="iters" type="range" min="1" max="5000" step="1" value="200">
+      <div class="row" style="margin-top:8px;"><button id="gd-start">Start</button><button class="ghost" id="gd-step">Step</button><button class="ghost" id="gd-stop">Stop</button><button class="ghost" id="gd-reset">Reset</button></div>
+
+      <label>Visualization toggles</label>
+      <div class="row" style="margin-top:6px"><label class="small"><input type="checkbox" id="show-residuals" checked> Show residuals</label><label style="margin-left:8px" class="small"><input type="checkbox" id="show-cost" checked> Show cost plot</label></div>
+
+      <div class="stats" style="margin-top:10px">
+        <div class="stat">slope: <strong id="slope">—</strong></div>
+        <div class="stat">intercept: <strong id="intercept">—</strong></div>
+        <div class="stat">R²: <strong id="r2">—</strong></div>
+        <div class="stat">MSE: <strong id="mse">—</strong></div>
+      </div>
+
+      <div class="footer">
+        <div class="muted small">Model predictions in blue line. Ground truth/fit in bright cyan.</div>
+        <div>
+          <button class="ghost" id="export">Export CSV</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="plot-card panel" style="height:66%">
+        <svg id="svg-scatter" viewBox="0 0 800 520" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <div class="plot-card panel" style="height:32%">
+        <svg id="svg-cost" viewBox="0 0 800 220" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    // --- Setup and constants ---
+    const width = 800, height = 520;
+    const margin = {top:20,right:20,bottom:40,left:50};
+
+    const svg = d3.select('#svg-scatter').attr('width',width).attr('height',height);
+    const svgCost = d3.select('#svg-cost').attr('width',width).attr('height',220);
+
+    const xScale = d3.scaleLinear().domain([0,10]).range([margin.left,width-margin.right]);
+    const yScale = d3.scaleLinear().domain([0,10]).range([height-margin.bottom,margin.top]);
+
+    // Data state
+    let points = [];
+    let model = {m:0, b:0};
+    let gdState = {running:false, iterations:0, costHistory:[], init:null};
+
+    // DOM
+    const pointCount = document.getElementById('pointCount');
+    const slopeEl = document.getElementById('slope');
+    const interceptEl = document.getElementById('intercept');
+    const r2El = document.getElementById('r2');
+    const mseEl = document.getElementById('mse');
+
+    // Controls
+    const noiseEl = document.getElementById('noise');
+    const lrEl = document.getElementById('lr');
+    const lrVal = document.getElementById('lrVal');
+    const itersEl = document.getElementById('iters');
+
+    lrEl.addEventListener('input', ()=> lrVal.textContent = parseFloat(lrEl.value).toFixed(3));
+
+    // --- Utility functions ---
+    function computeOLS(data){
+      const n = data.length; if(n===0) return {m:0,b:0};
+      let sx=0, sy=0, sxy=0, sxx=0;
+      for(const p of data){ sx+=p.x; sy+=p.y; sxy+=p.x*p.y; sxx+=p.x*p.x }
+      const m = (n*sxy - sx*sy) / (n*sxx - sx*sx);
+      const b = (sy - m*sx)/n;
+      return {m: isFinite(m)?m:0, b: isFinite(b)?b:0};
+    }
+
+    function predict(x, mdl){ return mdl.m*x + mdl.b }
+
+    function metrics(data, mdl){
+      if(data.length===0) return {mse:0,r2:0};
+      const meanY = d3.mean(data, d=>d.y);
+      let ssRes=0, ssTot=0;
+      for(const p of data){ const err = p.y - predict(p.x,mdl); ssRes += err*err; const dy = p.y - meanY; ssTot += dy*dy }
+      const mse = ssRes/data.length;
+      const r2 = ssTot === 0 ? 1 : 1 - ssRes/ssTot;
+      return {mse,r2};
+    }
+
+    function computeCost(data, m, b){
+      if(data.length===0) return 0;
+      let sum=0; for(const p of data){ const e = p.y - (m*p.x + b); sum += e*e };
+      return sum / data.length;
+    }
+
+    // --- Drawing ---
+    svg.append('g').attr('class','x-axis');
+    svg.append('g').attr('class','y-axis');
+    const lineLayer = svg.append('g').attr('class','line-layer');
+    const pointsLayer = svg.append('g').attr('class','points-layer');
+    const residLayer = svg.append('g').attr('class','resid-layer');
+
+    function drawAxes(){
+      const xAxis = d3.axisBottom(xScale).ticks(10).tickSizeOuter(0);
+      const yAxis = d3.axisLeft(yScale).ticks(10).tickSizeOuter(0);
+      svg.select('.x-axis').attr('transform',`translate(0,${height-margin.bottom})`).call(xAxis);
+      svg.select('.y-axis').attr('transform',`translate(${margin.left},0)`).call(yAxis);
+    }
+
+    function draw(){
+      drawAxes();
+      // Line
+      const line = d3.line().x(d=>xScale(d.x)).y(d=>yScale(d.y));
+      const fitPoints = [{x:0,y:predict(0,model)},{x:10,y:predict(10,model)}];
+      const fit = lineLayer.selectAll('.fit-line').data([fitPoints]);
+      fit.join('path').attr('class','fit-line').attr('d',line).attr('fill','none').attr('stroke','#00e0ff').attr('stroke-width',2.5).attr('stroke-linecap','round');
+
+      // Residuals
+      const showResid = document.getElementById('show-residuals').checked;
+      const resid = residLayer.selectAll('.resid').data(showResid ? points : [] , d=>d.id);
+      resid.join(
+        enter => enter.append('line').attr('class','resid').attr('x1',d=>xScale(d.x)).attr('y1',d=>yScale(d.y)).attr('x2',d=>xScale(d.x)).attr('y2',d=>yScale(predict(d.x,model))).attr('stroke','rgba(255,255,255,0.12)').attr('stroke-width',2),
+        update => update.call(u => u.transition().duration(120).attr('x1',d=>xScale(d.x)).attr('y1',d=>yScale(d.y)).attr('x2',d=>xScale(d.x)).attr('y2',d=>yScale(predict(d.x,model)))),
+        exit => exit.remove()
+      );
+
+      // Points (drag)
+      const pts = pointsLayer.selectAll('.pt').data(points, d=>d.id);
+      const drag = d3.drag()
+        .on('start', (event,d)=>{ d3.select(event.sourceEvent.target).raise(); })
+        .on('drag', (event,d)=>{ const [mx,my] = d3.pointer(event); d.x = clamp(xScale.invert(mx),0,10); d.y = clamp(yScale.invert(my),0,10); draw(); updateStats(); })
+        .on('end', ()=>{});
+
+      pts.join(
+        enter => enter.append('circle').attr('class','pt').attr('r',6).attr('cx',d=>xScale(d.x)).attr('cy',d=>yScale(d.y)).attr('fill','#60a5fa').attr('stroke','#062033').attr('stroke-width',1.5).call(drag).on('click', (event,d)=>{ if(event.shiftKey){ points = points.filter(p=>p.id!==d.id); draw(); updateStats(); } }),
+        update => update.call(u => u.transition().duration(120).attr('cx',d=>xScale(d.x)).attr('cy',d=>yScale(d.y))),
+        exit => exit.remove()
+      );
+
+      updateCostPlot();
+    }
+
+    function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+    // --- Interaction ---
+    d3.select('#svg-scatter').on('click', function(event){
+      const [mx,my] = d3.pointer(event);
+      // ignore if clicked on a point (we let point click handle deletes)
+      if(event.target.tagName === 'circle') return;
+      const x = clamp(xScale.invert(mx),0,10);
+      const y = clamp(yScale.invert(my),0,10);
+      addPoint(x,y);
+    });
+
+    function addPoint(x,y){ points.push({id:Date.now()+Math.random()*1000, x:+x, y:+y}); draw(); updateStats(); }
+
+    document.getElementById('clear').addEventListener('click', ()=>{ points=[]; model={m:0,b:0}; gdState={running:false,iterations:0,costHistory:[],init:null}; draw(); updateStats(); });
+
+    document.getElementById('randomize').addEventListener('click', ()=>{
+      points=[]; const n = 8 + Math.floor(Math.random()*8);
+      const slope = (Math.random()*2 - 0.5) * 2;
+      const intercept = Math.random()*3 + 1;
+      for(let i=0;i<n;i++){ const x = Math.random()*10; const y = slope*x + intercept + (Math.random()-0.5)*2*noiseEl.value; points.push({id:Date.now()+i,x,y}); }
+      model = computeOLS(points); gdState.costHistory=[]; draw(); updateStats();
+    });
+
+    document.getElementById('load-sample').addEventListener('click', ()=>{
+      points = [ {id:1,x:0.5,y:1.0},{id:2,x:1.8,y:2.2},{id:3,x:2.5,y:3.0},{id:4,x:3.2,y:2.8},{id:5,x:4.5,y:4.6},{id:6,x:6.1,y:6.2},{id:7,x:7.8,y:7.9} ]; model = computeOLS(points); gdState.costHistory=[]; draw(); updateStats();
+    });
+
+    document.getElementById('fit-ols').addEventListener('click', ()=>{ model = computeOLS(points); gdState.costHistory=[]; draw(); updateStats(); });
+
+    // --- Export CSV ---
+    document.getElementById('export').addEventListener('click', ()=>{
+      const csv = 'x,y\n' + points.map(p=>`${p.x.toFixed(4)},${p.y.toFixed(4)}`).join('\n');
+      const blob = new Blob([csv],{type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='points.csv'; a.click(); URL.revokeObjectURL(url);
+    });
+
+    // --- Gradient descent ---
+    let gdTimer = null;
+    function resetGD(){ gdState.iterations=0; gdState.costHistory=[]; gdState.init = {m: model.m, b: model.b}; }
+
+    function gdStep(){
+      if(points.length===0) return;
+      const lr = +lrEl.value; const n = points.length;
+      let dm=0, db=0;
+      for(const p of points){ const pred = model.m*p.x + model.b; const err = pred - p.y; dm += (2/n) * err * p.x; db += (2/n) * err; }
+      model.m -= lr * dm; model.b -= lr * db;
+      gdState.iterations++;
+      gdState.costHistory.push(computeCost(points, model.m, model.b));
+      draw(); updateStats();
+    }
+
+    document.getElementById('fit-gd').addEventListener('click', ()=>{ model = {m:0,b:0}; resetGD(); draw(); updateStats(); });
+
+    document.getElementById('gd-start').addEventListener('click', ()=>{
+      if(gdState.running) return; gdState.running=true; const maxIt = +itersEl.value;
+      let count=0; gdTimer = setInterval(()=>{ if(count++ >= maxIt){ clearInterval(gdTimer); gdState.running=false; } else gdStep(); }, 16);
+    });
+    document.getElementById('gd-step').addEventListener('click', ()=>{ gdStep(); });
+    document.getElementById('gd-stop').addEventListener('click', ()=>{ if(gdTimer) clearInterval(gdTimer); gdState.running=false; });
+    document.getElementById('gd-reset').addEventListener('click', ()=>{ if(gdTimer) clearInterval(gdTimer); gdState.running=false; model = gdState.init ? {...gdState.init} : {m:0,b:0}; gdState.iterations=0; gdState.costHistory=[]; draw(); updateStats(); });
+
+    // --- Cost plot ---
+    function updateCostPlot(){
+      const show = document.getElementById('show-cost').checked;
+      const w = width, h = 220, pad = 30;
+      svgCost.selectAll('*').remove();
+      if(!show) return;
+      const hist = gdState.costHistory.length?gdState.costHistory:[computeCost(points, model.m, model.b)];
+      const x = d3.scaleLinear().domain([0, Math.max(1, hist.length-1)]).range([pad,w-pad]);
+      const y = d3.scaleLinear().domain([0, d3.max(hist) || 1]).nice().range([h-pad,pad]);
+      const axisX = d3.axisBottom(x).ticks(Math.min(8,hist.length));
+      const axisY = d3.axisLeft(y).ticks(4);
+      svgCost.append('g').attr('transform',`translate(0,${h-pad})`).call(axisX);
+      svgCost.append('g').attr('transform',`translate(${pad},0)`).call(axisY);
+      const line = d3.line().x((d,i)=>x(i)).y(d=>y(d));
+      svgCost.append('path').datum(hist).attr('d',line).attr('fill','none').attr('stroke','#34d399').attr('stroke-width',2);
+      svgCost.append('text').attr('x',w-10).attr('y',h-6).attr('text-anchor','end').attr('class','muted').attr('font-size',12).text('Cost');
+    }
+
+    // --- Stats update ---
+    function updateStats(){ pointCount.textContent = points.length; const m = model.m, b = model.b; slopeEl.textContent = m.toFixed(4); interceptEl.textContent = b.toFixed(4); const met = metrics(points, model); r2El.textContent = met.r2.toFixed(4); mseEl.textContent = met.mse.toFixed(4); }
+
+    // --- helpers: seeded sample and initialization ---
+    // Start with a small sample
+    function initSample(){ const s = [ {id:1,x:0.5,y:1.0},{id:2,x:1.8,y:2.2},{id:3,x:2.5,y:3.0},{id:4,x:3.2,y:2.8},{id:5,x:4.5,y:4.6} ]; points = s.map(d=>({ ...d })); model = computeOLS(points); draw(); updateStats(); }
+
+    // --- small UI events ---
+    document.getElementById('noise').addEventListener('input', ()=>{});
+    document.getElementById('show-residuals').addEventListener('change', ()=> draw());
+    document.getElementById('show-cost').addEventListener('change', ()=> draw());
+
+    // --- initial draw ---
+    initSample();
+
+    // --- keyboard shortcuts ---
+    window.addEventListener('keydown', (e)=>{
+      if(e.key === 'z' && (e.ctrlKey || e.metaKey)){
+        // undo last
+        points.pop(); draw(); updateStats();
+      }
+    });
+
+    // Responsive scales on resize
+    window.addEventListener('resize', ()=>{ /* left as exercise: for responsiveness */ });
+
+    // Final: expose some functions for debugging in console
+    window.__lr = {points, model, addPoint, computeOLS};
+  </script>
+</body>
+</html>
