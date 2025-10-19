@@ -9,11 +9,27 @@ const algorithms = [
     title: 'K-Means Clustering',
     description: 'An unsupervised learning algorithm for partitioning data into K distinct clusters.'
   },
-  // {
-  //   path: 'another-algo',
-  //   title: 'Another Algorithm',
-  //   description: 'A description of your next amazing visualization.'
-  // }
+  {
+    path: 'gradient-descent',
+    title: 'Gradient Descent',
+    description: 'n optimization algorithm that iteratively adjusts parameters in the direction of the negative gradient to minimize a function’s value.'
+  },
+  {
+    path: 'linear-regression',
+    title: 'Linear Regression',
+    description: 'A statistical method that models the relationship between a dependent variable and one or more independent variables by fitting a straight line that minimizes prediction errors.'
+  },
+  {
+    path: 'pca',
+    title: 'PCA (Principal Component Analysis)',
+    description: 'A dimensionality reduction technique that transforms correlated variables into a smaller set of uncorrelated components capturing the maximum variance in the data.'
+  },
+  {
+    path: 'random-forest',
+    title: 'Random Forest',
+    description: 'A ensemble learning algorithm that builds multiple decision trees and combines their predictions to improve accuracy and reduce overfitting.'
+  },
+  
 ];
 
 const Home = () => {
