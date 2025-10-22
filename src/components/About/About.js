@@ -21,7 +21,7 @@ const About = () => {
         </div>
         <div className="author-content">
           <p className="author-bio">
-            This project is a personal initiative to deepen my understanding of core machine learning algorithms by building them from the ground up. Each visualization is a standalone, interactive HTML/JS application, brought together in this modern React showcase.
+            This collection represents a personal exploration of foundational machine learning algorithms, implemented from scratch and visualized interactively to make their inner workings clear and approachable.
           </p>
           <ul className="feature-list">
             <li><span className="feature-icon">1</span><span className="feature-text"><strong>Interactive Visualizations:</strong> Hands-on, configurable modules for each algorithm.</span></li>
