@@ -24,11 +24,26 @@ const About = () => {
             This collection represents a personal exploration of foundational machine learning algorithms, implemented from scratch and visualized interactively to make their inner workings clear and approachable.
           </p>
           <ul className="feature-list">
-            <li><span className="feature-icon">1</span><span className="feature-text"><strong>Interactive Visualizations:</strong> Hands-on, configurable modules for each algorithm.</span></li>
-            <li><span className="feature-icon">2</span><span className="feature-text"><strong>Modern Tech Stack:</strong> Built with React and hosted on GitHub Pages for a fast, responsive experience.</span></li>
-            <li><span className="feature-icon">3</span><span className="feature-text"><strong>Educational Focus:</strong> Aimed at students, developers, and enthusiasts looking to grasp the inner workings of ML models.</span></li>
-          </ul>
-        </div>
+  <li>
+    <span className="feature-icon">1</span>
+    <span className="feature-text">
+      <strong>Interactive Visualizations:</strong> Engaging, configurable modules that bring each algorithm to life through dynamic exploration.
+    </span>
+  </li>
+  <li>
+    <span className="feature-icon">2</span>
+    <span className="feature-text">
+      <strong>Seamless Experience:</strong> Designed for clarity, responsiveness, and smooth interaction across all devices.
+    </span>
+  </li>
+  <li>
+    <span className="feature-icon">3</span>
+    <span className="feature-text">
+      <strong>Educational Focus:</strong> Created for learners and practitioners seeking an intuitive understanding of core machine learning concepts.
+    </span>
+  </li>
+</ul>
+     </div>
       </section>
 
       <section className="about-section author-section">
