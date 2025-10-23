@@ -12,7 +12,7 @@ const algorithms = [
   {
     path: 'gradient-descent',
     title: 'Gradient Descent',
-    description: 'n optimization algorithm that iteratively adjusts parameters in the direction of the negative gradient to minimize a function’s value.'
+    description: 'An optimization algorithm that iteratively adjusts parameters in the direction of the negative gradient to minimize a function’s value.'
   },
   {
     path: 'linear-regression',

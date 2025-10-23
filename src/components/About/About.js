@@ -25,23 +25,24 @@ const About = () => {
           </p>
           <ul className="feature-list">
   <li>
-    <span className="feature-icon">1</span>
-    <span className="feature-text">
-      <strong>Interactive Visualizations:</strong> Engaging, configurable modules that bring each algorithm to life through dynamic exploration.
-    </span>
-  </li>
-  <li>
-    <span className="feature-icon">2</span>
-    <span className="feature-text">
-      <strong>Seamless Experience:</strong> Designed for clarity, responsiveness, and smooth interaction across all devices.
-    </span>
-  </li>
-  <li>
-    <span className="feature-icon">3</span>
-    <span className="feature-text">
-      <strong>Educational Focus:</strong> Created for learners and practitioners seeking an intuitive understanding of core machine learning concepts.
-    </span>
-  </li>
+  <span className="feature-icon">1</span>
+  <span className="feature-text">
+    <strong>Interactive Visuals:</strong> Explore each algorithm hands-on with visual tools that make the concepts click.
+  </span>
+</li>
+<li>
+  <span className="feature-icon">2</span>
+  <span className="feature-text">
+    <strong>Smooth and Simple:</strong> Everything’s built to feel fast, clear, and easy to use—no matter what device you’re on.
+  </span>
+</li>
+<li>
+  <span className="feature-icon">3</span>
+  <span className="feature-text">
+    <strong>Made for Learning:</strong> Perfect for anyone who wants to truly understand how machine learning works, not just see the results.
+  </span>
+</li>
+
 </ul>
      </div>
       </section>
