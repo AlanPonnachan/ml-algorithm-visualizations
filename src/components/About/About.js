@@ -54,10 +54,10 @@ const About = () => {
         </div>
         <div className="author-card">
           <div className="author-info">
-            <h3 className="author-name">Your Name</h3>
-            <p className="author-title">Technology Writer & AI Enthusiast</p>
+            <h3 className="author-name">Alan Ponnachan</h3>
+            <p className="author-title">ML Engineer | OSS Contributor</p>
             <p className="author-bio">
-              Passionate about exploring the intersection of artificial intelligence and enterprise technology. Dedicated to making complex technical concepts accessible to a wider audience through comprehensive, well-researched content.
+              Architecting end-to-end machine learning solutions, from open-source foundations to production scale.
             </p>
             <div className="social-links">
               <a href="https://github.com/your-username" target="_blank" rel="noopener noreferrer" className="social-link github">GitHub</a>
