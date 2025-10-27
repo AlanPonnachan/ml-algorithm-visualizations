@@ -60,7 +60,7 @@ const About = () => {
               Architecting end-to-end machine learning solutions, from open-source foundations to production scale.
             </p>
             <div className="social-links">
-              <a href="https://github.com/your-username" target="_blank" rel="noopener noreferrer" className="social-link github">GitHub</a>
+              <a href="https://github.com/AlanPonnachan" target="_blank" rel="noopener noreferrer" className="social-link github">GitHub</a>
               <a href="https://linkedin.com/in/your-profile" target="_blank" rel="noopener noreferrer" className="social-link linkedin">LinkedIn</a>
               <a href="https://twitter.com/your-handle" target="_blank" rel="noopener noreferrer" className="social-link twitter">Twitter</a>
             </div>
