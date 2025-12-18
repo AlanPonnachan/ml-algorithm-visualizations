@@ -62,7 +62,7 @@ const About = () => {
             <div className="social-links">
               <a href="https://github.com/AlanPonnachan" target="_blank" rel="noopener noreferrer" className="social-link github">GitHub</a>
               <a href="https://www.linkedin.com/in/alan-ponnachan-92731a214/" target="_blank" rel="noopener noreferrer" className="social-link linkedin">LinkedIn</a>
-              <a href="https://twitter.com/your-handle" target="_blank" rel="noopener noreferrer" className="social-link twitter">Twitter</a>
+              <a href="https://x.com/alan_ponnachan" target="_blank" rel="noopener noreferrer" className="social-link twitter">Twitter</a>
             </div>
           </div>
         </div>

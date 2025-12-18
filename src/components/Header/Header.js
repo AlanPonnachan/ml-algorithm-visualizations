@@ -6,7 +6,7 @@ const Header = () => {
   return (
     <header className="app-header">
       <div className="header-brand">
-        <NavLink to="/">ML Algorithm Showcase</NavLink>
+        <NavLink to="/">ML Algorithm Playground</NavLink>
       </div>
       <nav className="header-nav">
         <NavLink to="/">Home</NavLink>
