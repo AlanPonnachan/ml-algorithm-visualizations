@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Random Forest Visualization</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            height: 100vh;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .control-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            overflow-y: auto;
+        }
+
+        .main-area {
+            display: grid;
+            grid-template-rows: 1fr 200px;
+            gap: 20px;
+        }
+
+        .visualization-area {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .forest-area {
+            background: rgba(240, 248, 255, 0.8);
+            border-radius: 10px;
+            padding: 15px;
+            border: 2px dashed #4a90e2;
+        }
+
+        .controls-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .controls-section:last-child {
+            border-bottom: none;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            text-align: center;
+            padding: 8px;
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            border-radius: 8px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #34495e;
+        }
+
+        .control-group input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        .control-group input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #bdc3c7;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .control-group input[type="number"]:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+
+        .value-display {
+            font-size: 12px;
+            color: #7f8c8d;
+            text-align: center;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .primary-btn {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        .secondary-btn {
+            background: linear-gradient(45deg, #27ae60, #229954);
+            color: white;
+        }
+
+        .info-btn {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            color: white;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .tree {
+            margin: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .tree:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .tree-active {
+            border-color: #e74c3c;
+            background: #fff5f5;
+        }
+
+        .stats-area {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            align-items: center;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .data-point {
+            transition: all 0.3s ease;
+        }
+
+        .data-point:hover {
+            stroke: #333;
+            stroke-width: 2;
+        }
+
+        .prediction-area {
+            background: rgba(255, 248, 225, 0.8);
+            border-radius: 10px;
+            padding: 15px;
+            border: 2px dashed #f39c12;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: rgba(52, 152, 219, 0.1);
+            border-radius: 8px;
+        }
+
+        .step {
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            background: #bdc3c7;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .step.active {
+            background: #3498db;
+            transform: scale(1.1);
+        }
+
+        .step.completed {
+            background: #27ae60;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <h1 style="text-align: center; margin-bottom: 20px; color: #2c3e50;">🌳 Random Forest</h1>
+            
+            <!-- Dataset Controls -->
+            <div class="controls-section">
+                <div class="section-title">📊 Dataset</div>
+                <div class="control-group">
+                    <label>Number of Samples</label>
+                    <input type="range" id="numSamples" min="50" max="500" value="200">
+                    <div class="value-display" id="numSamplesValue">200</div>
+                </div>
+                <div class="control-group">
+                    <label>Noise Level</label>
+                    <input type="range" id="noiseLevel" min="0" max="0.5" step="0.05" value="0.1">
+                    <div class="value-display" id="noiseLevelValue">0.1</div>
+                </div>
+                <button class="secondary-btn" onclick="generateData()">🎲 Generate New Data</button>
+            </div>
+
+            <!-- Forest Controls -->
+            <div class="controls-section">
+                <div class="section-title">🌲 Forest Parameters</div>
+                <div class="control-group">
+                    <label>Number of Trees</label>
+                    <input type="range" id="numTrees" min="1" max="20" value="5">
+                    <div class="value-display" id="numTreesValue">5</div>
+                </div>
+                <div class="control-group">
+                    <label>Max Tree Depth</label>
+                    <input type="range" id="maxDepth" min="2" max="8" value="4">
+                    <div class="value-display" id="maxDepthValue">4</div>
+                </div>
+                <div class="control-group">
+                    <label>Bootstrap Sample %</label>
+                    <input type="range" id="bootstrapRatio" min="0.3" max="1.0" step="0.1" value="0.8">
+                    <div class="value-display" id="bootstrapRatioValue">80%</div>
+                </div>
+            </div>
+
+            <!-- Training Controls -->
+            <div class="controls-section">
+                <div class="section-title">🎯 Training</div>
+                <button class="primary-btn" onclick="trainForest()">🚀 Train Forest</button>
+                <button class="info-btn" onclick="stepByStep()">📚 Step by Step</button>
+                <button class="secondary-btn" onclick="resetForest()">🔄 Reset</button>
+            </div>
+
+            <!-- Animation Controls -->
+            <div class="controls-section">
+                <div class="section-title">⏯️ Animation</div>
+                <div class="control-group">
+                    <label>Animation Speed (ms)</label>
+                    <input type="range" id="animationSpeed" min="100" max="2000" step="100" value="800">
+                    <div class="value-display" id="animationSpeedValue">800ms</div>
+                </div>
+                <button class="info-btn" onclick="toggleAnimation()">⏸️ Pause/Resume</button>
+            </div>
+
+            <!-- Visualization Options -->
+            <div class="controls-section">
+                <div class="section-title">👁️ Visualization</div>
+                <div class="control-group">
+                    <label><input type="checkbox" id="showDecisionBoundary" checked> Decision Boundary</label>
+                </div>
+                <div class="control-group">
+                    <label><input type="checkbox" id="showIndividualTrees"> Individual Tree Predictions</label>
+                </div>
+                <div class="control-group">
+                    <label><input type="checkbox" id="showBootstrapSamples"> Bootstrap Samples</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Area -->
+        <div class="main-area">
+            <div class="visualization-area">
+                <!-- Data Visualization -->
+                <div class="prediction-area">
+                    <h3 style="text-align: center; margin-bottom: 10px;">📈 Data & Predictions</h3>
+                    <svg id="dataSvg" width="100%" height="300"></svg>
+                </div>
+                
+                <!-- Forest Visualization -->
+                <div class="forest-area">
+                    <h3 style="text-align: center; margin-bottom: 10px;">🌲 Decision Trees</h3>
+                    <div class="step-indicator" id="stepIndicator"></div>
+                    <div id="forestContainer"></div>
+                </div>
+            </div>
+
+            <!-- Statistics Area -->
+            <div class="stats-area">
+                <div class="stat-card">
+                    <div class="stat-value" id="accuracyStat">--</div>
+                    <div class="stat-label">Accuracy</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="treesStat">0</div>
+                    <div class="stat-label">Trees Trained</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="samplesStat">--</div>
+                    <div class="stat-label">Training Samples</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="predictionsStat">--</div>
+                    <div class="stat-label">Predictions Made</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip" style="display: none;"></div>
+
+    <script>
+        // Global variables
+        let data = [];
+        let forest = [];
+        let isTraining = false;
+        let animationPaused = false;
+        let currentStep = 0;
+        const steps = ['Generate', 'Bootstrap', 'Train Trees', 'Combine', 'Predict'];
+
+        // Initialize the visualization
+        function init() {
+            setupControlListeners();
+            generateData();
+            updateStepIndicator();
+        }
+
+        // Setup event listeners for controls
+        function setupControlListeners() {
+            const controls = ['numSamples', 'noiseLevel', 'numTrees', 'maxDepth', 'bootstrapRatio', 'animationSpeed'];
+            
+            controls.forEach(id => {
+                const element = document.getElementById(id);
+                element.addEventListener('input', () => {
+                    updateValueDisplay(id);
+                    if (['numSamples', 'noiseLevel'].includes(id)) {
+                        generateData();
+                    }
+                });
+            });
+
+            // Checkbox listeners
+            ['showDecisionBoundary', 'showIndividualTrees', 'showBootstrapSamples'].forEach(id => {
+                document.getElementById(id).addEventListener('change', updateVisualization);
+            });
+        }
+
+        // Update value displays
+        function updateValueDisplay(id) {
+            const element = document.getElementById(id);
+            const valueElement = document.getElementById(id + 'Value');
+            let value = element.value;
+            
+            if (id === 'bootstrapRatio') {
+                value = Math.round(value * 100) + '%';
+            } else if (id === 'animationSpeed') {
+                value += 'ms';
+            }
+            
+            valueElement.textContent = value;
+        }
+
+        // Generate random 2D dataset
+        function generateData() {
+            const numSamples = parseInt(document.getElementById('numSamples').value);
+            const noiseLevel = parseFloat(document.getElementById('noiseLevel').value);
+            
+            data = [];
+            for (let i = 0; i < numSamples; i++) {
+                const x1 = Math.random() * 10;
+                const x2 = Math.random() * 10;
+                
+                // Create a non-linear decision boundary
+                let label = (x1 - 5) * (x1 - 5) + (x2 - 5) * (x2 - 5) < 6;
+                
+                // Add some noise
+                if (Math.random() < noiseLevel) {
+                    label = !label;
+                }
+                
+                data.push({
+                    x1: x1,
+                    x2: x2,
+                    label: label ? 1 : 0,
+                    prediction: null,
+                    confidence: 0
+                });
+            }
+            
+            updateVisualization();
+            updateStats();
+            resetForest();
+        }
+
+        // Simple decision tree implementation
+        class DecisionTree {
+            constructor(maxDepth = 4) {
+                this.maxDepth = maxDepth;
+                this.root = null;
+            }
+
+            train(data) {
+                this.root = this.buildTree(data, 0);
+            }
+
+            buildTree(data, depth) {
+                if (depth >= this.maxDepth || data.length < 2 || this.isPure(data)) {
+                    return {
+                        isLeaf: true,
+                        prediction: this.majorityClass(data),
+                        samples: data.length
+                    };
+                }
+
+                const bestSplit = this.findBestSplit(data);
+                if (!bestSplit) {
+                    return {
+                        isLeaf: true,
+                        prediction: this.majorityClass(data),
+                        samples: data.length
+                    };
+                }
+
+                const leftData = data.filter(d => d[bestSplit.feature] <= bestSplit.threshold);
+                const rightData = data.filter(d => d[bestSplit.feature] > bestSplit.threshold);
+
+                return {
+                    isLeaf: false,
+                    feature: bestSplit.feature,
+                    threshold: bestSplit.threshold,
+                    left: this.buildTree(leftData, depth + 1),
+                    right: this.buildTree(rightData, depth + 1),
+                    samples: data.length
+                };
+            }
+
+            findBestSplit(data) {
+                let bestGini = Infinity;
+                let bestSplit = null;
+
+                for (const feature of ['x1', 'x2']) {
+                    const values = data.map(d => d[feature]).sort((a, b) => a - b);
+                    
+                    for (let i = 1; i < values.length; i++) {
+                        if (values[i] === values[i-1]) continue;
+                        
+                        const threshold = (values[i] + values[i-1]) / 2;
+                        const gini = this.calculateSplitGini(data, feature, threshold);
+                        
+                        if (gini < bestGini) {
+                            bestGini = gini;
+                            bestSplit = { feature, threshold };
+                        }
+                    }
+                }
+
+                return bestSplit;
+            }
+
+            calculateSplitGini(data, feature, threshold) {
+                const left = data.filter(d => d[feature] <= threshold);
+                const right = data.filter(d => d[feature] > threshold);
+                
+                const total = data.length;
+                const leftWeight = left.length / total;
+                const rightWeight = right.length / total;
+                
+                return leftWeight * this.gini(left) + rightWeight * this.gini(right);
+            }
+
+            gini(data) {
+                if (data.length === 0) return 0;
+                
+                const counts = data.reduce((acc, d) => {
+                    acc[d.label] = (acc[d.label] || 0) + 1;
+                    return acc;
+                }, {});
+                
+                const total = data.length;
+                let gini = 1;
+                
+                for (const count of Object.values(counts)) {
+                    const prob = count / total;
+                    gini -= prob * prob;
+                }
+                
+                return gini;
+            }
+
+            isPure(data) {
+                const firstLabel = data[0].label;
+                return data.every(d => d.label === firstLabel);
+            }
+
+            majorityClass(data) {
+                const counts = data.reduce((acc, d) => {
+                    acc[d.label] = (acc[d.label] || 0) + 1;
+                    return acc;
+                }, {});
+                
+                return Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
+            }
+
+            predict(point) {
+                return this.predictNode(this.root, point);
+            }
+
+            predictNode(node, point) {
+                if (node.isLeaf) {
+                    return parseInt(node.prediction);
+                }
+                
+                if (point[node.feature] <= node.threshold) {
+                    return this.predictNode(node.left, point);
+                } else {
+                    return this.predictNode(node.right, point);
+                }
+            }
+
+            getTreeStructure(node = this.root, depth = 0) {
+                if (!node) return null;
+                
+                if (node.isLeaf) {
+                    return {
+                        type: 'leaf',
+                        prediction: node.prediction,
+                        samples: node.samples,
+                        depth
+                    };
+                }
+                
+                return {
+                    type: 'split',
+                    feature: node.feature,
+                    threshold: node.threshold.toFixed(2),
+                    samples: node.samples,
+                    depth,
+                    left: this.getTreeStructure(node.left, depth + 1),
+                    right: this.getTreeStructure(node.right, depth + 1)
+                };
+            }
+        }
+
+        // Bootstrap sampling
+        function bootstrapSample(data, ratio = 0.8) {
+            const sampleSize = Math.floor(data.length * ratio);
+            const sample = [];
+            
+            for (let i = 0; i < sampleSize; i++) {
+                const randomIndex = Math.floor(Math.random() * data.length);
+                sample.push(data[randomIndex]);
+            }
+            
+            return sample;
+        }
+
+        // Train the random forest
+        async function trainForest() {
+            if (isTraining) return;
+            
+            isTraining = true;
+            forest = [];
+            
+            const numTrees = parseInt(document.getElementById('numTrees').value);
+            const maxDepth = parseInt(document.getElementById('maxDepth').value);
+            const bootstrapRatio = parseFloat(document.getElementById('bootstrapRatio').value);
+            
+            currentStep = 1;
+            updateStepIndicator();
+            
+            for (let i = 0; i < numTrees; i++) {
+                if (animationPaused) {
+                    await waitForResume();
+                }
+                
+                // Bootstrap sampling
+                const sample = bootstrapSample(data, bootstrapRatio);
+                
+                // Train tree
+                const tree = new DecisionTree(maxDepth);
+                tree.train(sample);
+                tree.bootstrapSample = sample;
+                
+                forest.push(tree);
+                
+                // Update visualization
+                highlightCurrentTree(i);
+                updateStats();
+                
+                // Animation delay
+                await sleep(parseInt(document.getElementById('animationSpeed').value));
+            }
+            
+            currentStep = 3;
+            updateStepIndicator();
+            
+            // Make predictions
+            makePredictions();
+            
+            currentStep = 4;
+            updateStepIndicator();
+            
+            isTraining = false;
+        }
+
+        // Step by step training
+        async function stepByStep() {
+            // This will trigger the same training but with more detailed steps
+            await trainForest();
+        }
+
+        // Make predictions using the forest
+        function makePredictions() {
+            if (forest.length === 0) return;
+            
+            data.forEach(point => {
+                const predictions = forest.map(tree => tree.predict(point));
+                const avgPrediction = predictions.reduce((a, b) => a + b, 0) / predictions.length;
+                
+                point.prediction = avgPrediction > 0.5 ? 1 : 0;
+                point.confidence = Math.abs(avgPrediction - 0.5) * 2;
+            });
+            
+            updateVisualization();
+            updateStats();
+        }
+
+        // Utility functions
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function waitForResume() {
+            return new Promise(resolve => {
+                const checkPaused = () => {
+                    if (!animationPaused) {
+                        resolve();
+                    } else {
+                        setTimeout(checkPaused, 100);
+                    }
+                };
+                checkPaused();
+            });
+        }
+
+        function toggleAnimation() {
+            animationPaused = !animationPaused;
+            document.querySelector('.info-btn:nth-of-type(2)').textContent = 
+                animationPaused ? '▶️ Resume' : '⏸️ Pause';
+        }
+
+        function resetForest() {
+            forest = [];
+            data.forEach(point => {
+                point.prediction = null;
+                point.confidence = 0;
+            });
+            currentStep = 0;
+            updateStepIndicator();
+            updateVisualization();
+            updateStats();
+            document.getElementById('forestContainer').innerHTML = '';
+        }
+
+        // Update step indicator
+        function updateStepIndicator() {
+            const container = document.getElementById('stepIndicator');
+            container.innerHTML = '';
+            
+            steps.forEach((step, index) => {
+                const div = document.createElement('div');
+                div.className = 'step';
+                div.textContent = step;
+                
+                if (index < currentStep) {
+                    div.classList.add('completed');
+                } else if (index === currentStep) {
+                    div.classList.add('active');
+                }
+                
+                container.appendChild(div);
+            });
+        }
+
+        // Highlight current tree being trained
+        function highlightCurrentTree(treeIndex) {
+            const container = document.getElementById('forestContainer');
+            
+            // Create tree visualization
+            const treeDiv = document.createElement('div');
+            treeDiv.className = 'tree tree-active';
+            treeDiv.innerHTML = `
+                <div style="padding: 10px; text-align: center;">
+                    <strong>Tree ${treeIndex + 1}</strong><br>
+                    <small>Samples: ${forest[treeIndex].bootstrapSample.length}</small>
+                </div>
+                <svg width="150" height="80" id="tree-${treeIndex}"></svg>
+            `;
+            
+            container.appendChild(treeDiv);
+            
+            // Draw simple tree structure
+            const svg = d3.select(`#tree-${treeIndex}`);
+            const treeStructure = forest[treeIndex].getTreeStructure();
+            drawTreeStructure(svg, treeStructure);
+            
+            // Remove active class after animation
+            setTimeout(() => {
+                treeDiv.classList.remove('tree-active');
+            }, 1000);
+        }
+
+        // Draw tree structure
+        function drawTreeStructure(svg, node, x = 75, y = 20, level = 0) {
+            if (!node) return;
+            
+            const nodeRadius = 8;
+            const levelHeight = 25;
+            
+            // Draw node
+            svg.append('circle')
+                .attr('cx', x)
+                .attr('cy', y)
+                .attr('r', nodeRadius)
+                .attr('fill', node.type === 'leaf' ? '#27ae60' : '#3498db')
+                .attr('stroke', '#2c3e50')
+                .attr('stroke-width', 1);
+            
+            // Add text
+            svg.append('text')
+                .attr('x', x)
+                .attr('y', y + 3)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '8px')
+                .attr('fill', 'white')
+                .text(node.type === 'leaf' ? node.prediction : node.feature);
+            
+            // Draw children
+            if (node.type === 'split') {
+                const childY = y + levelHeight;
+                const leftX = x - 20;
+                const rightX = x + 20;
+                
+                // Draw lines
+                svg.append('line')
+                    .attr('x1', x)
+                    .attr('y1', y + nodeRadius)
+                    .attr('x2', leftX)
+                    .attr('y2', childY - nodeRadius)
+                    .attr('stroke', '#7f8c8d')
+                    .attr('stroke-width', 1);
+                
+                svg.append('line')
+                    .attr('x1', x)
+                    .attr('y1', y + nodeRadius)
+                    .attr('x2', rightX)
+                    .attr('y2', childY - nodeRadius)
+                    .attr('stroke', '#7f8c8d')
+                    .attr('stroke-width', 1);
+                
+                // Draw children recursively
+                drawTreeStructure(svg, node.left, leftX, childY, level + 1);
+                drawTreeStructure(svg, node.right, rightX, childY, level + 1);
+            }
+        }
+
+        // Update main data visualization
+        function updateVisualization() {
+            const svg = d3.select('#dataSvg');
+            svg.selectAll('*').remove();
+            
+            const width = svg.node().getBoundingClientRect().width;
+            const height = 300;
+            
+            const xScale = d3.scaleLinear()
+                .domain([0, 10])
+                .range([20, width - 20]);
+            
+            const yScale = d3.scaleLinear()
+                .domain([0, 10])
+                .range([height - 20, 20]);
+            
+            // Draw decision boundary if enabled
+            if (document.getElementById('showDecisionBoundary').checked && forest.length > 0) {
+                drawDecisionBoundary(svg, xScale, yScale, width, height);
+            }
+            
+            // Draw data points
+            svg.selectAll('.data-point')
+                .data(data)
+                .enter()
+                .append('circle')
+                .attr('class', 'data-point')
+                .attr('cx', d => xScale(d.x1))
+                .attr('cy', d => yScale(d.x2))
+                .attr('r', 4)
+                .attr('fill', d => {
+                    if (d.prediction !== null) {
+                        return d.prediction === 1 ? '#e74c3c' : '#3498db';
+                    }
+                    return d.label === 1 ? '#c0392b' : '#2980b9';
+                })
+                .attr('stroke', d => {
+                    if (d.prediction !== null && d.prediction !== d.label) {
+                        return '#f39c12';
+                    }
+                    return 'white';
+                })
+                .attr('stroke-width', d => {
+                    if (d.prediction !== null && d.prediction !== d.label) {
+                        return 2;
+                    }
+                    return 1;
+                })
+                .attr('opacity', d => d.confidence ? 0.5 + d.confidence * 0.5 : 0.8)
+                .on('mouseover', function(event, d) {
+                    const tooltip = d3.select('#tooltip');
+                    tooltip.style('display', 'block')
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 10) + 'px')
+                        .html(`
+                            <strong>Data Point</strong><br>
+                            X1: ${d.x1.toFixed(2)}<br>
+                            X2: ${d.x2.toFixed(2)}<br>
+                            True Label: ${d.label}<br>
+                            ${d.prediction !== null ? `Prediction: ${d.prediction}<br>Confidence: ${(d.confidence * 100).toFixed(1)}%` : 'Not predicted yet'}
+                        `);
+                })
+                .on('mouseout', function() {
+                    d3.select('#tooltip').style('display', 'none');
+                });
+
+            // Add axes
+            const xAxis = d3.axisBottom(xScale).ticks(5);
+            const yAxis = d3.axisLeft(yScale).ticks(5);
+            
+            svg.append('g')
+                .attr('transform', `translate(0, ${height - 20})`)
+                .call(xAxis);
+            
+            svg.append('g')
+                .attr('transform', `translate(20, 0)`)
+                .call(yAxis);
+            
+            // Add axis labels
+            svg.append('text')
+                .attr('x', width / 2)
+                .attr('y', height - 5)
+                .attr('text-anchor', 'middle')
+                .style('font-size', '12px')
+                .text('Feature X1');
+            
+            svg.append('text')
+                .attr('transform', 'rotate(-90)')
+                .attr('x', -height / 2)
+                .attr('y', 15)
+                .attr('text-anchor', 'middle')
+                .style('font-size', '12px')
+                .text('Feature X2');
+        }
+
+        // Draw decision boundary using grid sampling
+        function drawDecisionBoundary(svg, xScale, yScale, width, height) {
+            const resolution = 50;
+            const boundaryData = [];
+            
+            for (let i = 0; i <= resolution; i++) {
+                for (let j = 0; j <= resolution; j++) {
+                    const x1 = (i / resolution) * 10;
+                    const x2 = (j / resolution) * 10;
+                    
+                    const predictions = forest.map(tree => tree.predict({x1, x2}));
+                    const avgPrediction = predictions.reduce((a, b) => a + b, 0) / predictions.length;
+                    
+                    boundaryData.push({
+                        x1,
+                        x2,
+                        prediction: avgPrediction
+                    });
+                }
+            }
+            
+            // Create color scale for decision boundary
+            const colorScale = d3.scaleLinear()
+                .domain([0, 0.5, 1])
+                .range(['#3498db', '#ffffff', '#e74c3c']);
+            
+            svg.selectAll('.boundary-point')
+                .data(boundaryData)
+                .enter()
+                .append('rect')
+                .attr('class', 'boundary-point')
+                .attr('x', d => xScale(d.x1) - 2)
+                .attr('y', d => yScale(d.x2) - 2)
+                .attr('width', 4)
+                .attr('height', 4)
+                .attr('fill', d => colorScale(d.prediction))
+                .attr('opacity', 0.3);
+        }
+
+        // Update statistics
+        function updateStats() {
+            // Calculate accuracy
+            let correct = 0;
+            let total = 0;
+            
+            data.forEach(point => {
+                if (point.prediction !== null) {
+                    total++;
+                    if (point.prediction === point.label) {
+                        correct++;
+                    }
+                }
+            });
+            
+            const accuracy = total > 0 ? (correct / total * 100).toFixed(1) + '%' : '--';
+            
+            document.getElementById('accuracyStat').textContent = accuracy;
+            document.getElementById('treesStat').textContent = forest.length;
+            document.getElementById('samplesStat').textContent = data.length;
+            document.getElementById('predictionsStat').textContent = total;
+        }
+
+        // Feature importance calculation (simplified)
+        function calculateFeatureImportance() {
+            if (forest.length === 0) return { x1: 0, x2: 0 };
+            
+            let x1Importance = 0;
+            let x2Importance = 0;
+            
+            forest.forEach(tree => {
+                const importance = getTreeFeatureImportance(tree.root);
+                x1Importance += importance.x1;
+                x2Importance += importance.x2;
+            });
+            
+            const total = x1Importance + x2Importance;
+            if (total === 0) return { x1: 0.5, x2: 0.5 };
+            
+            return {
+                x1: x1Importance / total,
+                x2: x2Importance / total
+            };
+        }
+
+        function getTreeFeatureImportance(node, importance = { x1: 0, x2: 0 }) {
+            if (!node || node.isLeaf) return importance;
+            
+            importance[node.feature] += node.samples || 1;
+            
+            getTreeFeatureImportance(node.left, importance);
+            getTreeFeatureImportance(node.right, importance);
+            
+            return importance;
+        }
+
+        // Advanced visualization features
+        function showIndividualTreePredictions() {
+            if (!document.getElementById('showIndividualTrees').checked) return;
+            
+            // This would show predictions from each individual tree
+            // Implementation would overlay different tree predictions
+        }
+
+        function showBootstrapSamples() {
+            if (!document.getElementById('showBootstrapSamples').checked) return;
+            
+            // This would highlight the bootstrap samples used for each tree
+            // Implementation would show which points were selected for training
+        }
+
+        // Export functionality
+        function exportResults() {
+            const results = {
+                data: data,
+                forestParameters: {
+                    numTrees: forest.length,
+                    maxDepth: parseInt(document.getElementById('maxDepth').value),
+                    bootstrapRatio: parseFloat(document.getElementById('bootstrapRatio').value)
+                },
+                accuracy: document.getElementById('accuracyStat').textContent,
+                featureImportance: calculateFeatureImportance()
+            };
+            
+            const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'random_forest_results.json';
+            a.click();
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(event) {
+            switch(event.key) {
+                case 'g':
+                case 'G':
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        generateData();
+                    }
+                    break;
+                case 't':
+                case 'T':
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        trainForest();
+                    }
+                    break;
+                case 'r':
+                case 'R':
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        resetForest();
+                    }
+                    break;
+                case ' ':
+                    event.preventDefault();
+                    toggleAnimation();
+                    break;
+            }
+        });
+
+        // Add help modal functionality
+        function showHelp() {
+            const helpContent = `
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <h3>🌳 Random Forest Visualization Help</h3>
+                    
+                    <h4>🎮 Controls:</h4>
+                    <ul>
+                        <li><strong>Ctrl+G:</strong> Generate new data</li>
+                        <li><strong>Ctrl+T:</strong> Train forest</li>
+                        <li><strong>Ctrl+R:</strong> Reset forest</li>
+                        <li><strong>Spacebar:</strong> Pause/Resume animation</li>
+                    </ul>
+                    
+                    <h4>📊 Understanding the Visualization:</h4>
+                    <ul>
+                        <li><strong>Blue/Red dots:</strong> Training data (blue=class 0, red=class 1)</li>
+                        <li><strong>Decision boundary:</strong> Shows how the forest classifies the space</li>
+                        <li><strong>Tree structures:</strong> Individual decision trees in the forest</li>
+                        <li><strong>Yellow outline:</strong> Misclassified points</li>
+                    </ul>
+                    
+                    <h4>🌲 Random Forest Algorithm:</h4>
+                    <ol>
+                        <li><strong>Bootstrap:</strong> Sample data with replacement</li>
+                        <li><strong>Train Trees:</strong> Build decision trees on bootstrap samples</li>
+                        <li><strong>Combine:</strong> Average predictions from all trees</li>
+                        <li><strong>Predict:</strong> Make final predictions on test data</li>
+                    </ol>
+                    
+                    <h4>⚙️ Parameters:</h4>
+                    <ul>
+                        <li><strong>Number of Trees:</strong> More trees = better performance, slower training</li>
+                        <li><strong>Max Depth:</strong> Deeper trees = more complex decisions</li>
+                        <li><strong>Bootstrap Ratio:</strong> Fraction of data used per tree</li>
+                    </ul>
+                </div>
+            `;
+            
+            // Create modal (simplified implementation)
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.8); z-index: 2000;
+                display: flex; align-items: center; justify-content: center;
+            `;
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white; padding: 30px; border-radius: 15px;
+                max-width: 600px; max-height: 80vh; overflow-y: auto;
+            `;
+            content.innerHTML = helpContent + '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="margin-top: 20px; width: 100%; padding: 10px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;">Close</button>';
+            
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+        }
+
+        // Add help button to control panel
+        function addHelpButton() {
+            const controlPanel = document.querySelector('.control-panel');
+            const helpButton = document.createElement('button');
+            helpButton.textContent = '❓ Help & Shortcuts';
+            helpButton.className = 'info-btn';
+            helpButton.style.marginTop = '20px';
+            helpButton.onclick = showHelp;
+            controlPanel.appendChild(helpButton);
+        }
+
+        // Initialize everything when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            init();
+            addHelpButton();
+            
+            // Initialize all value displays
+            ['numSamples', 'noiseLevel', 'numTrees', 'maxDepth', 'bootstrapRatio', 'animationSpeed'].forEach(updateValueDisplay);
+            
+            console.log('🌳 Random Forest Visualization loaded! Use Ctrl+G, Ctrl+T, Ctrl+R, or Spacebar for quick actions.');
+        });
+    </script>
+</body>
+</html>

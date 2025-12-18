@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Gradient Descent Learning Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 2.2em;
+            font-weight: 300;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr 280px;
+            gap: 20px;
+            height: 600px;
+        }
+
+        .left-controls, .right-controls {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .function-info {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .control-group h3 {
+            margin: 0 0 12px 0;
+            color: #2c3e50;
+            font-size: 1em;
+            font-weight: 600;
+        }
+
+        .control-item {
+            margin-bottom: 12px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+            font-size: 13px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        select, input[type="number"] {
+            width: 100%;
+            padding: 6px;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            font-size: 13px;
+            background: white;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button.secondary {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        button.danger {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .value-display {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 12px;
+        }
+
+        .stats {
+            background: #e8f4f8;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .stats h4 {
+            margin: 0 0 8px 0;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 12px;
+        }
+
+        .convergence-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 15px;
+            font-size: 12px;
+        }
+
+        .learning-tips {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 6px;
+            padding: 10px;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .learning-tips h4 {
+            margin: 0 0 8px 0;
+            font-size: 12px;
+            color: #155724;
+        }
+
+        .comparison-mode {
+            background: #f8d7da;
+            border: 1px solid #f1b0b7;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+
+        .axis {
+            font-size: 11px;
+        }
+
+        .grid line {
+            stroke: #e0e0e0;
+            stroke-dasharray: 2,2;
+        }
+
+        .function-path {
+            fill: none;
+            stroke: #2196F3;
+            stroke-width: 3;
+        }
+
+        .gradient-path {
+            fill: none;
+            stroke: #FF5722;
+            stroke-width: 2;
+            opacity: 0.8;
+        }
+
+        .current-point {
+            fill: #FF5722;
+            stroke: white;
+            stroke-width: 3;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .tangent-line {
+            stroke: #4CAF50;
+            stroke-width: 2;
+            stroke-dasharray: 5,5;
+        }
+
+        .minimum-point {
+            fill: #9C27B0;
+            stroke: white;
+            stroke-width: 2;
+            opacity: 0.7;
+        }
+
+        .local-minima {
+            fill: #FF9800;
+            stroke: white;
+            stroke-width: 2;
+            opacity: 0.6;
+        }
+
+        .step-arrow {
+            stroke: #FF5722;
+            stroke-width: 2;
+            fill: #FF5722;
+            opacity: 0.7;
+        }
+
+        .comparison-point {
+            stroke: white;
+            stroke-width: 2;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        @media (max-width: 1200px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+            
+            .chart-container {
+                order: 1;
+                height: 500px;
+            }
+            
+            .left-controls {
+                order: 2;
+            }
+            
+            .right-controls {
+                order: 3;
+            }
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            margin-right: 8px;
+            width: auto;
+        }
+
+        .preset-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .preset-buttons button {
+            font-size: 10px;
+            padding: 4px 8px;
+            background: #6c757d;
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Interactive Gradient Descent Learning Tool</h1>
+        
+        <div class="main-layout">
+            <!-- Left Controls -->
+            <div class="left-controls">
+                <div class="control-group">
+                    <h3>🎮 Quick Actions</h3>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <button id="startBtn">▶️ Start</button>
+                        <button id="pauseBtn" class="secondary">⏸️ Pause</button>
+                        <button id="stepBtn" class="secondary">👆 Single Step</button>
+                        <button id="resetBtn" class="danger">🔄 Reset</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>⚙️ Algorithm Parameters</h3>
+                    <div class="control-item">
+                        <label for="learningRate">Learning Rate: <span class="value-display" id="learningRateValue">0.1</span></label>
+                        <input type="range" id="learningRate" min="0.001" max="1" step="0.001" value="0.1">
+                        <div class="preset-buttons">
+                            <button onclick="setLearningRate(0.001)">Tiny</button>
+                            <button onclick="setLearningRate(0.01)">Small</button>
+                            <button onclick="setLearningRate(0.1)">Normal</button>
+                            <button onclick="setLearningRate(0.5)">Large</button>
+                            <button onclick="setLearningRate(1.0)">Huge</button>
+                        </div>
+                    </div>
+                    <div class="control-item">
+                        <label for="startX">Start Position: <span class="value-display" id="startXValue">3</span></label>
+                        <input type="range" id="startX" min="-4" max="4" step="0.1" value="3">
+                    </div>
+                    <div class="control-item">
+                        <label for="animationSpeed">Speed: <span class="value-display" id="animationSpeedValue">500ms</span></label>
+                        <input type="range" id="animationSpeed" min="50" max="2000" step="50" value="500">
+                    </div>
+                    <div class="control-item">
+                        <label for="maxIterations">Max Iterations: <span class="value-display" id="maxIterationsValue">1000</span></label>
+                        <input type="range" id="maxIterations" min="10" max="5000" step="10" value="1000">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>📊 Function Selection</h3>
+                    <div class="control-item">
+                        <select id="functionType">
+                            <option value="quadratic">Simple Bowl: x²</option>
+                            <option value="cubic">Cubic: x³ - 3x</option>
+                            <option value="quartic">Double Well: x⁴ - 4x²</option>
+                            <option value="sine">Wavy: sin(x) + 0.1x²</option>
+                            <option value="complex">Complex: x⁴ - 2x² + x</option>
+                            <option value="rosenbrock">Steep Valley: 10(x-1)²</option>
+                            <option value="noisy">Noisy: x² + 0.5sin(5x)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>🔬 Advanced Controls</h3>
+                    <div class="control-item">
+                        <label for="momentum">Momentum: <span class="value-display" id="momentumValue">0</span></label>
+                        <input type="range" id="momentum" min="0" max="0.9" step="0.1" value="0">
+                    </div>
+                    <div class="control-item">
+                        <label for="decayRate">Learning Decay: <span class="value-display" id="decayRateValue">0</span></label>
+                        <input type="range" id="decayRate" min="0" max="0.01" step="0.001" value="0">
+                    </div>
+                </div>
+
+                <div class="learning-tips">
+                    <h4>💡 Learning Tips</h4>
+                    <div id="learningTip">Try different learning rates to see how they affect convergence speed and stability.</div>
+                </div>
+            </div>
+
+            <!-- Center Chart -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <div class="function-info" id="functionInfo">Function: x²</div>
+                    <div class="action-buttons">
+                        <button id="addComparisonBtn" class="secondary">➕ Compare</button>
+                        <button id="clearComparisonsBtn" class="danger">🗑️ Clear</button>
+                    </div>
+                </div>
+                <svg id="chart" width="100%" height="100%"></svg>
+            </div>
+
+            <!-- Right Controls -->
+            <div class="right-controls">
+                <div class="stats">
+                    <h4>📈 Live Statistics</h4>
+                    <div class="stat-item">
+                        <span>Iterations:</span>
+                        <span id="iterations">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Current X:</span>
+                        <span id="currentX">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Current Y:</span>
+                        <span id="currentY">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Gradient:</span>
+                        <span id="currentGradient">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Step Size:</span>
+                        <span id="stepSize">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Velocity:</span>
+                        <span id="velocity">0</span>
+                    </div>
+                </div>
+
+                <div class="convergence-info">
+                    <h4>🎯 Convergence Status</h4>
+                    <div id="convergenceStatus">Ready to start</div>
+                    <div style="margin-top: 8px;">
+                        <small>Threshold: <span id="convergenceThreshold">0.001</span></small>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>👁️ Visualization</h3>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="showTangent" checked>
+                        <label for="showTangent">Tangent Line</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="showPath" checked>
+                        <label for="showPath">Descent Path</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="showGrid" checked>
+                        <label for="showGrid">Grid Lines</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="showMinima" checked>
+                        <label for="showMinima">Local Minima</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="showStepArrows">
+                        <label for="showStepArrows">Step Arrows</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="showContours">
+                        <label for="showContours">Function Values</label>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>🔍 Analysis Tools</h3>
+                    <div class="control-item">
+                        <label for="convergenceThresholdSlider">Convergence Threshold:</label>
+                        <input type="range" id="convergenceThresholdSlider" min="0.0001" max="0.1" step="0.0001" value="0.001">
+                        <span class="value-display" id="thresholdValue">0.001</span>
+                    </div>
+                    <button id="findMinimaBtn" class="secondary">🔍 Find All Minima</button>
+                    <button id="exportDataBtn" class="secondary">📊 Export Data</button>
+                </div>
+
+                <div class="control-group">
+                    <h3>📚 Learning Scenarios</h3>
+                    <button onclick="loadScenario('learning_rates')" class="secondary">Learning Rate Effects</button>
+                    <button onclick="loadScenario('local_minima')" class="secondary">Local Minima Trap</button>
+                    <button onclick="loadScenario('momentum')" class="secondary">Momentum Benefits</button>
+                    <button onclick="loadScenario('saddle_point')" class="secondary">Saddle Points</button>
+                </div>
+
+                <div id="comparisonMode" class="comparison-mode" style="display: none;">
+                    <h4>📊 Comparison Mode</h4>
+                    <div id="comparisonList"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tooltip" id="tooltip"></div>
+    </div>
+
+    <script>
+        class GradientDescentVisualizer {
+            constructor() {
+                this.setupSVG();
+                this.initializeState();
+                this.setupFunctions();
+                this.bindEvents();
+                this.updateVisualization();
+                this.updateLearningTip();
+            }
+            
+            setupSVG() {
+                const container = document.querySelector('.chart-container');
+                this.containerRect = container.getBoundingClientRect();
+                
+                this.svg = d3.select('#chart');
+                this.margin = {top: 20, right: 20, bottom: 50, left: 60};
+                this.width = this.containerRect.width - this.margin.left - this.margin.right - 40;
+                this.height = this.containerRect.height - this.margin.top - this.margin.bottom - 80;
+                
+                this.svg.attr('viewBox', `0 0 ${this.width + this.margin.left + this.margin.right} ${this.height + this.margin.top + this.margin.bottom}`);
+                
+                this.xScale = d3.scaleLinear().domain([-5, 5]).range([0, this.width]);
+                this.yScale = d3.scaleLinear().domain([-10, 20]).range([this.height, 0]);
+                
+                this.initSVG();
+            }
+            
+            initializeState() {
+                this.currentX = 3;
+                this.currentY = 0;
+                this.velocity = 0;
+                this.iterations = 0;
+                this.learningRate = 0.1;
+                this.momentum = 0;
+                this.decayRate = 0;
+                this.animationSpeed = 500;
+                this.maxIterations = 1000;
+                this.convergenceThreshold = 0.001;
+                this.isRunning = false;
+                this.path = [];
+                this.animationTimer = null;
+                this.comparisons = [];
+                this.allMinima = [];
+            }
+            
+            setupFunctions() {
+                this.functions = {
+                    quadratic: {
+                        f: x => x * x,
+                        df: x => 2 * x,
+                        name: "x²",
+                        minima: [{x: 0, y: 0, type: 'global'}],
+                        tips: "Perfect bowl shape - single global minimum. Great for learning basics!"
+                    },
+                    cubic: {
+                        f: x => x * x * x - 3 * x,
+                        df: x => 3 * x * x - 3,
+                        name: "x³ - 3x",
+                        minima: [{x: 1, y: -2, type: 'local'}, {x: -1, y: 2, type: 'local'}],
+                        tips: "Has local minimum and maximum. Watch out for getting stuck!"
+                    },
+                    quartic: {
+                        f: x => x * x * x * x - 4 * x * x,
+                        df: x => 4 * x * x * x - 8 * x,
+                        name: "x⁴ - 4x²",
+                        minima: [{x: -Math.sqrt(2), y: -4, type: 'global'}, {x: Math.sqrt(2), y: -4, type: 'global'}, {x: 0, y: 0, type: 'local'}],
+                        tips: "Double well potential - two global minima! Starting position matters."
+                    },
+                    sine: {
+                        f: x => Math.sin(x) + 0.1 * x * x,
+                        df: x => Math.cos(x) + 0.2 * x,
+                        name: "sin(x) + 0.1x²",
+                        minima: [{x: 0, y: 0, type: 'approximate'}],
+                        tips: "Wavy function with many local minima. Challenging for optimization!"
+                    },
+                    complex: {
+                        f: x => x * x * x * x - 2 * x * x + x,
+                        df: x => 4 * x * x * x - 4 * x + 1,
+                        name: "x⁴ - 2x² + x",
+                        minima: [{x: 0.8, y: -0.38, type: 'approximate'}],
+                        tips: "Asymmetric function - notice how gradient descent finds one solution."
+                    },
+                    rosenbrock: {
+                        f: x => 10 * (x - 1) * (x - 1),
+                        df: x => 20 * (x - 1),
+                        name: "10(x-1)²",
+                        minima: [{x: 1, y: 0, type: 'global'}],
+                        tips: "Steep valley - demonstrates importance of learning rate tuning."
+                    },
+                    noisy: {
+                        f: x => x * x + 0.5 * Math.sin(5 * x),
+                        df: x => 2 * x + 2.5 * Math.cos(5 * x),
+                        name: "x² + 0.5sin(5x)",
+                        minima: [{x: 0, y: 0, type: 'global'}],
+                        tips: "Noisy function - see how gradient descent handles oscillations."
+                    }
+                };
+                
+                this.currentFunction = this.functions.quadratic;
+            }
+            
+            initSVG() {
+                this.svg.selectAll("*").remove();
+                
+                this.g = this.svg.append('g')
+                    .attr('transform', `translate(${this.margin.left},${this.margin.top})`);
+                
+                this.gridGroup = this.g.append('g').attr('class', 'grid');
+                this.functionGroup = this.g.append('g');
+                this.minimaGroup = this.g.append('g');
+                this.pathGroup = this.g.append('g');
+                this.arrowGroup = this.g.append('g');
+                this.comparisonGroup = this.g.append('g');
+                this.pointGroup = this.g.append('g');
+                this.tangentGroup = this.g.append('g');
+                
+                this.xAxis = this.g.append('g')
+                    .attr('class', 'axis')
+                    .attr('transform', `translate(0,${this.height})`);
+                    
+                this.yAxis = this.g.append('g')
+                    .attr('class', 'axis');
+                    
+                this.updateAxes();
+            }
+            
+            updateAxes() {
+                this.xAxis.call(d3.axisBottom(this.xScale).ticks(10));
+                this.yAxis.call(d3.axisLeft(this.yScale).ticks(8));
+                
+                if (document.getElementById('showGrid').checked) {
+                    this.gridGroup.selectAll('.grid-line').remove();
+                    
+                    this.gridGroup.selectAll('.vertical-grid')
+                        .data(this.xScale.ticks(10))
+                        .enter()
+                        .append('line')
+                        .attr('class', 'grid-line vertical-grid')
+                        .attr('x1', d => this.xScale(d))
+                        .attr('x2', d => this.xScale(d))
+                        .attr('y1', 0)
+                        .attr('y2', this.height)
+                        .style('stroke', '#e0e0e0')
+                        .style('stroke-dasharray', '2,2');
+                    
+                    this.gridGroup.selectAll('.horizontal-grid')
+                        .data(this.yScale.ticks(8))
+                        .enter()
+                        .append('line')
+                        .attr('class', 'grid-line horizontal-grid')
+                        .attr('x1', 0)
+                        .attr('x2', this.width)
+                        .attr('y1', d => this.yScale(d))
+                        .attr('y2', d => this.yScale(d))
+                        .style('stroke', '#e0e0e0')
+                        .style('stroke-dasharray', '2,2');
+                } else {
+                    this.gridGroup.selectAll('.grid-line').remove();
+                }
+            }
+            
+            generateFunctionData() {
+                const data = [];
+                for (let x = -5; x <= 5; x += 0.05) {
+                    data.push({x: x, y: this.currentFunction.f(x)});
+                }
+                return data;
+            }
+            
+            updateVisualization() {
+                this.updateAxes();
+                this.drawFunction();
+                this.drawMinima();
+                this.drawPath();
+                this.drawStepArrows();
+                this.drawCurrentPoint();
+                this.drawTangentLine();
+                this.drawComparisons();
+                this.updateStats();
+                this.updateConvergenceStatus();
+            }
+            
+            drawFunction() {
+                const data = this.generateFunctionData();
+                const line = d3.line()
+                    .x(d => this.xScale(d.x))
+                    .y(d => this.yScale(d.y))
+                    .curve(d3.curveCardinal);
+                
+                const path = this.functionGroup.selectAll('.function-path')
+                    .data([data]);
+                
+                path.enter()
+                    .append('path')
+                    .attr('class', 'function-path')
+                    .merge(path)
+                    .attr('d', line);
+                    
+                // Add function value annotations if enabled
+                if (document.getElementById('showContours').checked) {
+                    const annotations = this.functionGroup.selectAll('.function-annotation')
+                        .data([-4, -2, 0, 2, 4]);
+                        
+                    annotations.enter()
+                        .append('text')
+                        .attr('class', 'function-annotation')
+                        .merge(annotations)
+                        .attr('x', d => this.xScale(d))
+                        .attr('y', d => this.yScale(this.currentFunction.f(d)) - 10)
+                        .text(d => `f(${d})=${this.currentFunction.f(d).toFixed(1)}`)
+                        .style('font-size', '10px')
+                        .style('text-anchor', 'middle')
+                        .style('fill', '#666');
+                        
+                    annotations.exit().remove();
+                } else {
+                    this.functionGroup.selectAll('.function-annotation').remove();
+                }
+            }
+            
+            drawMinima() {
+                if (!document.getElementById('showMinima').checked) {
+                    this.minimaGroup.selectAll('*').remove();
+                    return;
+                }
+                
+                const minima = this.minimaGroup.selectAll('.minimum-point')
+                    .data(this.currentFunction.minima);
+                
+                minima.enter()
+                    .append('circle')
+                    .attr('class', 'minimum-point')
+                    .merge(minima)
+                    .attr('cx', d => this.xScale(d.x))
+                    .attr('cy', d => this.yScale(d.y))
+                    .attr('r', d => d.type === 'global' ? 8 : 6)
+                    .style('fill', d => d.type === 'global' ? '#9C27B0' : '#FF9800')
+                    .on('mouseover', (event, d) => {
+                        const tooltip = document.getElementById('tooltip');
+                        tooltip.style.opacity = 1;
+                        tooltip.innerHTML = `${d.type} minimum<br>x: ${d.x.toFixed(3)}<br>y: ${d.y.toFixed(3)}`;
+                        tooltip.style.left = (event.pageX + 10) + 'px';
+                        tooltip.style.top = (event.pageY - 10) + 'px';
+                    })
+                    .on('mouseout', () => {
+                        document.getElementById('tooltip').style.opacity = 0;
+                    });
+                
+                minima.exit().remove();
+            }
+            
+            drawPath() {
+                if (!document.getElementById('showPath').checked || this.path.length < 2) {
+                    this.pathGroup.selectAll('*').remove();
+                    return;
+                }
+                
+                const line = d3.line()
+                    .x(d => this.xScale(d.x))
+                    .y(d => this.yScale(d.y))
+                    .curve(d3.curveLinear);
+                
+                const pathElement = this.pathGroup.selectAll('.gradient-path')
+                    .data([this.path]);
+                
+                pathElement.enter()
+                    .append('path')
+                    .attr('class', 'gradient-path')
+                    .merge(pathElement)
+                    .attr('d', line);
+                
+                const points = this.pathGroup.selectAll('.path-point')
+                    .data(this.path.slice(0, -1));
+                
+                points.enter()
+                    .append('circle')
+                    .attr('class', 'path-point')
+                    .merge(points)
+                    .attr('cx', d => this.xScale(d.x))
+                    .attr('cy', d => this.yScale(d.y))
+                    .attr('r', 2)
+                    .style('fill', '#FF9800')
+                    .style('stroke', 'white')
+                    .style('stroke-width', 1)
+                    .style('opacity', 0.7);
+                
+                points.exit().remove();
+            }
+            
+            drawStepArrows() {
+                if (!document.getElementById('showStepArrows').checked || this.path.length < 2) {
+                    this.arrowGroup.selectAll('*').remove();
+                    return;
+                }
+                
+                const lastSteps = this.path.slice(-Math.min(5, this.path.length));
+                const arrows = this.arrowGroup.selectAll('.step-arrow')
+                    .data(lastSteps.slice(0, -1));
+                
+                const arrowGroup = arrows.enter()
+                    .append('g')
+                    .attr('class', 'step-arrow');
+                
+                arrowGroup.append('line')
+                    .merge(arrows.select('line'))
+                    .attr('x1', (d, i) => this.xScale(d.x))
+                    .attr('y1', (d, i) => this.yScale(d.y))
+                    .attr('x2', (d, i) => this.xScale(lastSteps[i + 1].x))
+                    .attr('y2', (d, i) => this.yScale(lastSteps[i + 1].y))
+                    .style('stroke', '#FF5722')
+                    .style('stroke-width', 2)
+                    .style('opacity', 0.7);
+                
+                arrows.exit().remove();
+            }
+            
+            drawCurrentPoint() {
+                const point = this.pointGroup.selectAll('.current-point')
+                    .data([{x: this.currentX, y: this.currentY}]);
+                
+                point.enter()
+                    .append('circle')
+                    .attr('class', 'current-point')
+                    .attr('r', 0)
+                    .merge(point)
+                    .transition()
+                    .duration(200)
+                    .attr('cx', d => this.xScale(d.x))
+                    .attr('cy', d => this.yScale(d.y))
+                    .attr('r', 8);
+            }
+            
+            drawTangentLine() {
+                if (!document.getElementById('showTangent').checked) {
+                    this.tangentGroup.selectAll('*').remove();
+                    return;
+                }
+                
+                const gradient = this.currentFunction.df(this.currentX);
+                const tangentLength = 1;
+                const x1 = this.currentX - tangentLength;
+                const x2 = this.currentX + tangentLength;
+                const y1 = this.currentY - gradient * tangentLength;
+                const y2 = this.currentY + gradient * tangentLength;
+                
+                const line = this.tangentGroup.selectAll('.tangent-line')
+                    .data([{x1, y1, x2, y2}]);
+                
+                line.enter()
+                    .append('line')
+                    .attr('class', 'tangent-line')
+                    .merge(line)
+                    .transition()
+                    .duration(200)
+                    .attr('x1', d => this.xScale(d.x1))
+                    .attr('y1', d => this.yScale(d.y1))
+                    .attr('x2', d => this.xScale(d.x2))
+                    .attr('y2', d => this.yScale(d.y2));
+            }
+            
+            drawComparisons() {
+                const comparisons = this.comparisonGroup.selectAll('.comparison-point')
+                    .data(this.comparisons);
+                
+                comparisons.enter()
+                    .append('circle')
+                    .attr('class', 'comparison-point')
+                    .merge(comparisons)
+                    .attr('cx', d => this.xScale(d.x))
+                    .attr('cy', d => this.yScale(d.y))
+                    .attr('r', 6)
+                    .style('fill', (d, i) => d3.schemeCategory10[i % 10])
+                    .style('stroke', 'white')
+                    .style('stroke-width', 2)
+                    .style('opacity', 0.8);
+                
+                comparisons.exit().remove();
+            }
+            
+            updateStats() {
+                const gradient = this.currentFunction.df(this.currentX);
+                const stepSize = this.learningRate * Math.abs(gradient);
+                
+                document.getElementById('iterations').textContent = this.iterations;
+                document.getElementById('currentX').textContent = this.currentX.toFixed(4);
+                document.getElementById('currentY').textContent = this.currentY.toFixed(4);
+                document.getElementById('currentGradient').textContent = gradient.toFixed(4);
+                document.getElementById('stepSize').textContent = stepSize.toFixed(4);
+                document.getElementById('velocity').textContent = this.velocity.toFixed(4);
+            }
+            
+            updateConvergenceStatus() {
+                const gradient = Math.abs(this.currentFunction.df(this.currentX));
+                const status = document.getElementById('convergenceStatus');
+                
+                if (this.isRunning) {
+                    if (gradient < this.convergenceThreshold) {
+                        status.innerHTML = '✅ Converged!<br><small>Gradient below threshold</small>';
+                        status.style.color = 'green';
+                    } else if (this.iterations >= this.maxIterations) {
+                        status.innerHTML = '⏸️ Max iterations reached<br><small>Consider adjusting parameters</small>';
+                        status.style.color = 'orange';
+                    } else {
+                        status.innerHTML = '🔄 Running...<br><small>Descending gradient</small>';
+                        status.style.color = 'blue';
+                    }
+                } else {
+                    status.innerHTML = '⏯️ Paused<br><small>Ready to continue</small>';
+                    status.style.color = 'gray';
+                }
+            }
+            
+            updateLearningTip() {
+                const tips = [
+                    "Try different learning rates: too small = slow, too large = overshoot!",
+                    "Click anywhere on the function to set a new starting position.",
+                    "Enable momentum to help escape local minima and speed up convergence.",
+                    "Watch how different functions challenge gradient descent differently.",
+                    "Compare multiple runs with different parameters side by side.",
+                    "Learning rate decay helps fine-tune the solution near convergence.",
+                    "Local minima can trap gradient descent - try different starting points!",
+                    "The tangent line shows the direction and steepness of descent.",
+                    "Step arrows visualize recent moves in the optimization path."
+                ];
+                
+                const randomTip = tips[Math.floor(Math.random() * tips.length)];
+                document.getElementById('learningTip').textContent = randomTip;
+            }
+            
+            step() {
+                const gradient = this.currentFunction.df(this.currentX);
+                
+                // Apply learning rate decay
+                const currentLR = this.learningRate * (1 - this.decayRate * this.iterations);
+                
+                // Calculate momentum
+                this.velocity = this.momentum * this.velocity - currentLR * gradient;
+                const newX = this.currentX + this.velocity;
+                
+                this.path.push({x: this.currentX, y: this.currentY});
+                
+                this.currentX = Math.max(-5, Math.min(5, newX));
+                this.currentY = this.currentFunction.f(this.currentX);
+                this.iterations++;
+                
+                // Check for convergence
+                if (Math.abs(gradient) < this.convergenceThreshold || this.iterations >= this.maxIterations) {
+                    this.stop();
+                }
+                
+                this.updateVisualization();
+            }
+            
+            start() {
+                if (this.isRunning) return;
+                
+                this.isRunning = true;
+                document.getElementById('startBtn').textContent = '⏸️ Running';
+                
+                const animate = () => {
+                    if (this.isRunning) {
+                        this.step();
+                        this.animationTimer = setTimeout(animate, this.animationSpeed);
+                    }
+                };
+                
+                animate();
+            }
+            
+            pause() {
+                this.isRunning = false;
+                if (this.animationTimer) {
+                    clearTimeout(this.animationTimer);
+                }
+                document.getElementById('startBtn').textContent = '▶️ Start';
+            }
+            
+            stop() {
+                this.pause();
+            }
+            
+            reset() {
+                this.stop();
+                this.currentX = parseFloat(document.getElementById('startX').value);
+                this.currentY = this.currentFunction.f(this.currentX);
+                this.velocity = 0;
+                this.iterations = 0;
+                this.path = [];
+                this.updateVisualization();
+                this.updateLearningTip();
+            }
+            
+            addComparison() {
+                if (this.path.length > 0) {
+                    const finalPoint = {
+                        x: this.currentX,
+                        y: this.currentY,
+                        iterations: this.iterations,
+                        learningRate: this.learningRate,
+                        momentum: this.momentum,
+                        startX: this.path[0].x
+                    };
+                    
+                    this.comparisons.push(finalPoint);
+                    this.updateComparisonDisplay();
+                    this.updateVisualization();
+                }
+            }
+            
+            updateComparisonDisplay() {
+                const comparisonMode = document.getElementById('comparisonMode');
+                const comparisonList = document.getElementById('comparisonList');
+                
+                if (this.comparisons.length > 0) {
+                    comparisonMode.style.display = 'block';
+                    comparisonList.innerHTML = this.comparisons.map((comp, i) => 
+                        `<div style="font-size: 11px; margin-bottom: 5px; padding: 5px; background: ${d3.schemeCategory10[i % 10]}; color: white; border-radius: 3px;">
+                            Run ${i + 1}: x=${comp.x.toFixed(3)}, iterations=${comp.iterations}, lr=${comp.learningRate}
+                        </div>`
+                    ).join('');
+                } else {
+                    comparisonMode.style.display = 'none';
+                }
+            }
+            
+            clearComparisons() {
+                this.comparisons = [];
+                this.updateComparisonDisplay();
+                this.updateVisualization();
+            }
+            
+            findAllMinima() {
+                // Simple numerical approach to find local minima
+                const minima = [];
+                for (let x = -4.8; x <= 4.8; x += 0.1) {
+                    const f = this.currentFunction.f;
+                    const left = f(x - 0.1);
+                    const center = f(x);
+                    const right = f(x + 0.1);
+                    
+                    if (center < left && center < right) {
+                        minima.push({x: x, y: center, type: 'detected'});
+                    }
+                }
+                
+                // Remove duplicates and update display
+                this.allMinima = minima.filter((min, i, arr) => 
+                    i === 0 || Math.abs(min.x - arr[i-1].x) > 0.5
+                );
+                
+                alert(`Found ${this.allMinima.length} local minima! Check the visualization.`);
+                this.updateVisualization();
+            }
+            
+            exportData() {
+                const data = {
+                    function: this.currentFunction.name,
+                    path: this.path,
+                    finalPosition: {x: this.currentX, y: this.currentY},
+                    iterations: this.iterations,
+                    parameters: {
+                        learningRate: this.learningRate,
+                        momentum: this.momentum,
+                        decayRate: this.decayRate
+                    }
+                };
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'gradient_descent_data.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+            
+            bindEvents() {
+                // Parameter controls
+                document.getElementById('learningRate').addEventListener('input', (e) => {
+                    this.learningRate = parseFloat(e.target.value);
+                    document.getElementById('learningRateValue').textContent = this.learningRate.toFixed(3);
+                });
+                
+                document.getElementById('startX').addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    document.getElementById('startXValue').textContent = value.toFixed(1);
+                    if (!this.isRunning) {
+                        this.currentX = value;
+                        this.currentY = this.currentFunction.f(this.currentX);
+                        this.updateVisualization();
+                    }
+                });
+                
+                document.getElementById('animationSpeed').addEventListener('input', (e) => {
+                    this.animationSpeed = parseInt(e.target.value);
+                    document.getElementById('animationSpeedValue').textContent = this.animationSpeed + 'ms';
+                });
+                
+                document.getElementById('maxIterations').addEventListener('input', (e) => {
+                    this.maxIterations = parseInt(e.target.value);
+                    document.getElementById('maxIterationsValue').textContent = this.maxIterations;
+                });
+                
+                document.getElementById('momentum').addEventListener('input', (e) => {
+                    this.momentum = parseFloat(e.target.value);
+                    document.getElementById('momentumValue').textContent = this.momentum.toFixed(1);
+                });
+                
+                document.getElementById('decayRate').addEventListener('input', (e) => {
+                    this.decayRate = parseFloat(e.target.value);
+                    document.getElementById('decayRateValue').textContent = this.decayRate.toFixed(3);
+                });
+                
+                document.getElementById('convergenceThresholdSlider').addEventListener('input', (e) => {
+                    this.convergenceThreshold = parseFloat(e.target.value);
+                    document.getElementById('thresholdValue').textContent = this.convergenceThreshold.toFixed(4);
+                    document.getElementById('convergenceThreshold').textContent = this.convergenceThreshold.toFixed(4);
+                });
+                
+                // Function selection
+                document.getElementById('functionType').addEventListener('change', (e) => {
+                    this.currentFunction = this.functions[e.target.value];
+                    document.getElementById('functionInfo').textContent = `Function: ${this.currentFunction.name}`;
+                    document.getElementById('learningTip').textContent = this.currentFunction.tips;
+                    this.reset();
+                });
+                
+                // Visualization toggles
+                ['showTangent', 'showPath', 'showGrid', 'showMinima', 'showStepArrows', 'showContours'].forEach(id => {
+                    document.getElementById(id).addEventListener('change', () => {
+                        this.updateVisualization();
+                    });
+                });
+                
+                // Action buttons
+                document.getElementById('startBtn').addEventListener('click', () => {
+                    if (this.isRunning) {
+                        this.pause();
+                    } else {
+                        this.start();
+                    }
+                });
+                
+                document.getElementById('pauseBtn').addEventListener('click', () => {
+                    this.pause();
+                });
+                
+                document.getElementById('resetBtn').addEventListener('click', () => {
+                    this.reset();
+                });
+                
+                document.getElementById('stepBtn').addEventListener('click', () => {
+                    if (!this.isRunning) {
+                        this.step();
+                    }
+                });
+                
+                document.getElementById('addComparisonBtn').addEventListener('click', () => {
+                    this.addComparison();
+                });
+                
+                document.getElementById('clearComparisonsBtn').addEventListener('click', () => {
+                    this.clearComparisons();
+                });
+                
+                document.getElementById('findMinimaBtn').addEventListener('click', () => {
+                    this.findAllMinima();
+                });
+                
+                document.getElementById('exportDataBtn').addEventListener('click', () => {
+                    this.exportData();
+                });
+                
+                // Mouse interactions
+                this.svg.on('click', (event) => {
+                    if (!this.isRunning) {
+                        const [mouseX] = d3.pointer(event, this.g.node());
+                        const newX = this.xScale.invert(mouseX);
+                        this.currentX = Math.max(-5, Math.min(5, newX));
+                        this.currentY = this.currentFunction.f(this.currentX);
+                        document.getElementById('startX').value = this.currentX;
+                        document.getElementById('startXValue').textContent = this.currentX.toFixed(1);
+                        this.path = [];
+                        this.velocity = 0;
+                        this.iterations = 0;
+                        this.updateVisualization();
+                    }
+                });
+            }
+        }
+        
+        // Helper functions for preset buttons
+        function setLearningRate(rate) {
+            document.getElementById('learningRate').value = rate;
+            document.getElementById('learningRateValue').textContent = rate.toFixed(3);
+            visualizer.learningRate = rate;
+        }
+        
+        function loadScenario(scenario) {
+            switch(scenario) {
+                case 'learning_rates':
+                    document.getElementById('functionType').value = 'quadratic';
+                    setLearningRate(0.8);
+                    document.getElementById('startX').value = 3;
+                    document.getElementById('learningTip').textContent = "Compare high vs low learning rates. Try 0.8 vs 0.01!";
+                    break;
+                case 'local_minima':
+                    document.getElementById('functionType').value = 'quartic';
+                    setLearningRate(0.1);
+                    document.getElementById('startX').value = 0.5;
+                    document.getElementById('learningTip').textContent = "Starting near x=0.5 leads to local minimum. Try x=2 for global!";
+                    break;
+                case 'momentum':
+                    document.getElementById('functionType').value = 'sine';
+                    setLearningRate(0.05);
+                    document.getElementById('momentum').value = 0.7;
+                    document.getElementById('momentumValue').textContent = '0.7';
+                    document.getElementById('learningTip').textContent = "Momentum helps escape local minima in wavy functions!";
+                    break;
+                case 'saddle_point':
+                    document.getElementById('functionType').value = 'cubic';
+                    setLearningRate(0.1);
+                    document.getElementById('startX').value = 0;
+                    document.getElementById('learningTip').textContent = "Starting at x=0 is a saddle point. See where it goes!";
+                    break;
+            }
+            
+            // Trigger change events
+            document.getElementById('functionType').dispatchEvent(new Event('change'));
+            document.getElementById('momentum').dispatchEvent(new Event('input'));
+            visualizer.reset();
+        }
+        
+        // Initialize the visualizer
+        const visualizer = new GradientDescentVisualizer();
+    </script>
+</body>
+</html>
