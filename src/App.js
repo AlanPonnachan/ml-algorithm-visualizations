@@ -1,28 +1,23 @@
+// src/App.js
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+// 1. Make sure BrowserRouter is imported
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'; 
 
-// Import the new layout component
 import MainLayout from './components/MainLayout';
-
-// Import the page components
 import Home from './components/Home/Home';
 import About from './components/About/About';
 import Visualization from './components/Visualization/Visualization';
-
-// Import global styles
 import './App.css';
 
 function App() {
   return (
-    <Router>
+    // 2. ADD basename={process.env.PUBLIC_URL} HERE
+    <Router basename={process.env.PUBLIC_URL}> 
       <Routes>
-        {/* Wrap the standard pages in the MainLayout component */}
         <Route element={<MainLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
         </Route>
-
-        {/* The visualization route is separate, so it will not have the header or footer */}
         <Route path="/viz/:algoName" element={<Visualization />} />
       </Routes>
     </Router>
